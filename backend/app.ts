@@ -55,17 +55,39 @@ app.post("/api/user/validation", (req, res) => {
   }
 });
 
-app.get("/api/posts", async (req, res) => {
+app.get("/api/posts", authenticateToken, async (req, res) => {
   await sleep(1000);
   res.json(posts);
 });
 
-app.get("/api/posts/:id", (req, res) => {
+app.get("/api/posts/:id", authenticateToken, (req, res) => {
   const id = parseInt(req.params.id);
   const post = posts.find(post => post.id === id);
   if (!post) return res.status(404).json({ error: "Post not found" });
   res.json(post);
 });
+
+app.post("/api/posts/:id/edit", authenticateToken, (req, res) => {
+  const id = parseInt(req.params.id);
+  const post = posts.find(post => post.id === id);
+
+  if (!post) {
+    return res.status(404).json({ error: "Post not found" });
+  }
+
+  const { title, category, content, image } = req.body;
+
+  if (!title || !content || !content || !image) {
+    return res.status(400).json({ error: "Title and content are required." });
+  }
+
+  post.title = title;
+  post.category = category;
+  post.content = content;
+  post.image = image;
+
+  res.status(200).json({ success: true, post });
+})
 
 /**
  * Problems with this:

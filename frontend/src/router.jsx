@@ -13,11 +13,22 @@ import {
 import { PostPage, postsLoader } from "./pages/Post/Post.page";
 import { postDetailsLoader } from "./pages/Post/PostDetails.page";
 import PostDetailsPage from "./pages/Post/PostDetails.page";
+import PostEditPage from "./pages/Post/PostEdit.page";
 
 export const Router = () => {
+
   const authCheck = useBoundStore((state) => {
     return state.user ? state.user : false;
   });
+
+  const isUserPostOwner = async ({ params }) => {
+    const post = await postDetailsLoader({ params });
+    const user = authCheck;
+    if (post.userId !== user.id) {
+      throw new Response("Bad Request", { status: 400 });
+    }
+    return true;
+  };
 
   /**
    * CLIENT-SIDE ROUTER
@@ -59,6 +70,16 @@ export const Router = () => {
           element={
             <ProtectedRoute isAllowed={!!authCheck}>
               <PostDetailsPage />
+            </ProtectedRoute>
+          }
+          loader={postDetailsLoader}
+        />
+        <Route
+          path="/posts/:id/edit"
+          element={
+            // Check if user is authenticated and is the owner of the post
+            <ProtectedRoute isAllowed={!!authCheck && (async ({ params }) => await isUserPostOwner({ params }))}>
+              <PostEditPage />
             </ProtectedRoute>
           }
           loader={postDetailsLoader}
