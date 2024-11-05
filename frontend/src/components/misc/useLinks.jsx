@@ -11,7 +11,7 @@ export default () => {
 
   const handleClick = (action) => {
     close();
-    if (action) action();
+    if (typeof action === "function") action();
   };
 
   const items = !user

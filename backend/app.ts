@@ -10,20 +10,33 @@ import {
   posts,
   sleep,
 } from "./fakedb";
+import dotenv from "dotenv";
 
 const port = 8085;
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// TODO: Obviously use a more secure signing key than "secret"
+dotenv.config();
+// Securely load the signing key from environment variables
+const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_key";
+
+// Middleware to authenticate the token
+const authenticateToken = (req: any, res: any, next: any) => {
+  const authHeader = req.headers.authorization;
+  const token = parseToken(authHeader, res);
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
+}
+
 app.post("/api/user/login", (req, res) => {
   try {
     const { email, password } = req.body;
     const user = verifyUser(email, password);
-    const token = jwt.sign({ id: user.id }, "secret", {
-      expiresIn: "2 days",
-    });
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "2 days" });
     res.json({ result: { user, token } });
   } catch (error) {
     res.status(401).json({ error });
@@ -43,15 +56,15 @@ app.post("/api/user/validation", (req, res) => {
 });
 
 app.get("/api/posts", async (req, res) => {
-  // Sleep delay goes here
+  await sleep(1000);
   res.json(posts);
 });
 
-// ⭐️ TODO: Implement this yourself
 app.get("/api/posts/:id", (req, res) => {
-  const id = req.params.id;
-  // The line below should be fixed.
-  res.json(posts[0]);
+  const id = parseInt(req.params.id);
+  const post = posts.find(post => post.id === id);
+  if (!post) return res.status(404).json({ error: "Post not found" });
+  res.json(post);
 });
 
 /**
@@ -64,8 +77,11 @@ app.get("/api/posts/:id", (req, res) => {
  *     What if you make a request to this route with a valid token but
  *     with an empty/incorrect payload (post)
  */
-app.post("/api/posts", (req, res) => {
+app.post("/api/posts", authenticateToken, (req, res) => {
   const incomingPost = req.body;
+  if (!incomingPost.title || !incomingPost.content) {
+    return res.status(400).json({ error: "Title and content not provided." });
+  }
   addPost(incomingPost);
   res.status(200).json({ success: true });
 });

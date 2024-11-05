@@ -6,6 +6,9 @@ import { useLoaderData } from "react-router-dom";
 
 export const PostPage = () => {
   const posts = useLoaderData();
+
+  if (!posts) return <p>Loading...</p>;
+
   return (
     <Container>
       <SimpleGrid cols={3}>
@@ -18,7 +21,12 @@ export const PostPage = () => {
 };
 
 export const postsLoader = async () => {
-  const res = await axios.get(`${DOMAIN}/api/posts`);
-  console.log("I ran!");
-  return res.data;
+
+  try {
+    const res = await axios.get(`${DOMAIN}/api/posts`);
+    return res.data;
+  } catch (error) {
+    console.error("Failed to fetch posts:", error);
+    throw new Response("Failed to fetch posts", { status: 500 });
+  }
 };
